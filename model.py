@@ -9,12 +9,6 @@ from torch import nn, Tensor
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.utils.data import dataset
 
-T = 16
-Q = 5
-d_model = 2*Q**2 + 2
-nhead = 2
-num_layers = np.log(T)
-
 
 class PositionalEncoding(nn.Module):
 
@@ -47,9 +41,9 @@ class TransformerModel(nn.Module):
         self.pos_encoder = PositionalEncoding(d_model, dropout)
         encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.embedding = nn.Embedding(ntoken, d_model)
+        self.embedding = nn.Embedding(ntoken, d_model) # PUT ACTUAL EMBEDDING WITH VEC(A) HERE??
         self.d_model = d_model
-        self.linear = nn.Linear(d_model, ntoken)
+        self.linear = nn.Linear(d_model, 63) # magic number to get states from vectorized matrix
 
         self.init_weights()
 
@@ -68,7 +62,7 @@ class TransformerModel(nn.Module):
         Returns:
             output Tensor of shape ``[seq_len, batch_size, ntoken]``
         """
-        src = self.embedding(src) * math.sqrt(self.d_model)
+        src = self.embedding(src)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_mask)
         output = self.linear(output)

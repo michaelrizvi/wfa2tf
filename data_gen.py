@@ -36,6 +36,7 @@ if __name__ == "__main__":
 
         # Create data tensor
         test_examples_tensor = np.random.randint(wfa.nbL, size=(nbEx, T)) # Maybe there is a better way to generate the data?
+        # Does not sample from the "mode" of the data distribution!!!
         np.save(OUTPUT_PATH + f'{n}.pautomac_synth_data_len{T}_size{nbEx}.npy', test_examples_tensor)
 
         # Compute states for the data
