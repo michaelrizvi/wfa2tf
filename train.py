@@ -13,6 +13,8 @@ from splearn.datasets.base import load_data_sample
 import torch.nn.functional as F
 
 # TODO: add wandb support here
+# TODO: add instructions in the readme to get the Pautomac dataset from CLI
+# TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 

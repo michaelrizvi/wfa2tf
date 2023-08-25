@@ -1,7 +1,4 @@
-import os
 import numpy as np
-import time
-import pickle
 import splearn
 from splearn.datasets.base import load_data_sample
 from tqdm import tqdm
