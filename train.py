@@ -11,6 +11,8 @@ from model import TransformerModel
 from splearn.datasets.base import load_data_sample
 import torch.nn.functional as F
 import wandb
+from pathlib import Path
+
 
 run = wandb.init(project="wfa2tf")
 # TODO: add instructions in the readme to get the Pautomac dataset from CLI
@@ -31,13 +33,13 @@ def load_data(datapath, labelpath):
 
 
 # Load data from files
-OUTPUT_PATH = '/Users/michaelrizvi/data/wfa2tf-data/'
-#OUTPUT_PATH = '/home/mila/m/michael.rizvi-martel/data/wfa2tf-data/'
+home = str(Path.home())
+
+OUTPUT_PATH = home + '/data/wfa2tf-data/'
 y_train_file = '1.pautomac_states_train.npy'
 y_test_file = '1.pautomac_states_test.npy'
 
-INPUT_PATH = '/Users/michaelrizvi/data/PAutomaC-competition_sets/'
-#INPUT_PATH = '/home/mila/m/michael.rizvi-martel/data/PAutomaC-competition_sets/'
+INPUT_PATH = home + '/data/PAutomaC-competition_sets/'
 train_file = f'1.pautomac.train'
 test_file = f'1.pautomac.test'
 
@@ -104,7 +106,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 epoch_number = 0
 
-EPOCHS = 5
+EPOCHS = 1
 
 best_vloss = 1_000_000.
 

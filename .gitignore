@@ -165,3 +165,6 @@ runs
 
 # VS Code docs
 .vscode
+
+# Wandb stuff
+wandb/
