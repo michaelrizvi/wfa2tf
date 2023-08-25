@@ -1,0 +1,34 @@
+{
+    "os": "macOS-13.3-arm64-arm-64bit",
+    "python": "3.11.4",
+    "heartbeatAt": "2023-08-25T18:27:39.837200",
+    "startedAt": "2023-08-25T18:27:39.360611",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/michaelrizvi/repos/wfa2tf/train.py",
+    "codePath": "train.py",
+    "git": {
+        "remote": "git@github.com:michaelrizvi/wfa2tf.git",
+        "commit": "5f35864e63ff2f68592d6c2cbd0a9113c53f8ce9"
+    },
+    "email": null,
+    "root": "/Users/michaelrizvi/repos/wfa2tf",
+    "host": "Michaels-MacBook-Air.local",
+    "username": "michaelrizvi",
+    "executable": "/Users/michaelrizvi/repos/wfa2tf/wfa2tf-venv/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 8,
+    "disk": {
+        "total": 460.4317207336426,
+        "used": 8.455913543701172
+    },
+    "gpuapple": {
+        "type": "arm",
+        "vendor": "Apple"
+    },
+    "memory": {
+        "total": 8.0
+    }
+}

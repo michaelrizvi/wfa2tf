@@ -6,13 +6,13 @@ from torch import Tensor
 import torch.nn.functional as f
 import torch
 from torch import nn
-from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from model import TransformerModel
 from splearn.datasets.base import load_data_sample
 import torch.nn.functional as F
+import wandb
 
-# TODO: add wandb support here
+run = wandb.init(project="wfa2tf")
 # TODO: add instructions in the readme to get the Pautomac dataset from CLI
 # TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
 
@@ -32,10 +32,12 @@ def load_data(datapath, labelpath):
 
 # Load data from files
 OUTPUT_PATH = '/Users/michaelrizvi/data/wfa2tf-data/'
+#OUTPUT_PATH = '/home/mila/m/michael.rizvi-martel/data/wfa2tf-data/'
 y_train_file = '1.pautomac_states_train.npy'
 y_test_file = '1.pautomac_states_test.npy'
 
 INPUT_PATH = '/Users/michaelrizvi/data/PAutomaC-competition_sets/'
+#INPUT_PATH = '/home/mila/m/michael.rizvi-martel/data/PAutomaC-competition_sets/'
 train_file = f'1.pautomac.train'
 test_file = f'1.pautomac.test'
 
@@ -54,10 +56,11 @@ nhead = 2  # number of heads in ``nn.MultiheadAttention``
 dropout = 0.2  # dropout probability
 
 model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
+wandb.watch(model, log_freq=100)
 
 loss_fn = nn.MSELoss()
 # Define what to do for one epoch 
-def train_one_epoch(model, training_loader, optimizer, epoch_index, tb_writer):
+def train_one_epoch(model, training_loader, optimizer, epoch_index):
     running_loss = 0.
     last_loss = 0.
 
@@ -74,10 +77,10 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index, tb_writer):
         optimizer.zero_grad()
 
         # Make predictions for this batch
-        outputs = model(inputs).to(device)
+        outputs = model(inputs.cuda()).to(device)
 
         # Compute the loss and its gradients
-        loss = loss_fn(outputs, labels)
+        loss = loss_fn(outputs.cuda(), labels.cuda()).to(device)
         loss.backward()
 
         # Adjust learning weights
@@ -89,7 +92,7 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index, tb_writer):
             last_loss = running_loss / 1000 # loss per batch
             print('  batch {} loss: {}'.format(i + 1, last_loss))
             tb_x = epoch_index * len(training_loader) + i + 1
-            tb_writer.add_scalar('Loss/train', last_loss, tb_x)
+            wandb.log({"training loss": last_loss})
             running_loss = 0.
 
     return last_loss
@@ -99,10 +102,9 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index, tb_writer):
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-writer = SummaryWriter('runs/wfa_trainer_{}'.format(timestamp))
 epoch_number = 0
 
-EPOCHS = 1
+EPOCHS = 5
 
 best_vloss = 1_000_000.
 
@@ -111,7 +113,7 @@ for epoch in range(EPOCHS):
 
     # Make sure gradient tracking is on, and do a pass over the data
     model.train(True)
-    avg_loss = train_one_epoch(model, training_loader, optimizer, epoch, writer)
+    avg_loss = train_one_epoch(model, training_loader, optimizer, epoch)
 
     # We don't need gradients on to do reporting
     model.train(False)
@@ -128,10 +130,7 @@ for epoch in range(EPOCHS):
 
     # Log the running loss averaged per batch
     # for both training and validation
-    writer.add_scalars('Training vs. Validation Loss',
-                    { 'Training' : avg_loss, 'Validation' : avg_vloss },
-                    epoch_number + 1)
-    writer.flush()
+    wandb.log({"validation loss": avg_vloss})
 
     # Track best performance, and save the model's state
     if avg_vloss < best_vloss:
