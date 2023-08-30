@@ -28,7 +28,7 @@ def load_data(datapath, labelpath):
     data_list = []
     for i in range(len(data_tensor)):
         data_list.append([data_tensor[i], labels[i,1:,:]])
-    loader = torch.utils.data.DataLoader(data_list, shuffle=True, batch_size=4)
+    loader = torch.utils.data.DataLoader(data_list, shuffle=True, batch_size=32)
     return nbL, loader
 
 
@@ -60,7 +60,7 @@ dropout = 0.2  # dropout probability
 model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
 wandb.watch(model, log_freq=100)
 
-loss_fn = nn.MSELoss()
+loss_fn = nn.MSELoss(reduction='mean')
 # Define what to do for one epoch 
 def train_one_epoch(model, training_loader, optimizer, epoch_index):
     running_loss = 0.
@@ -69,7 +69,9 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
     # Here, we use enumerate(training_loader) instead of
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
-    for i, data in enumerate(tqdm(training_loader)):
+    for i, data in enumerate(training_loader):
+        if i > 100:
+            break
         # Every data instance is an input + label pair
         inputs, labels = data
         inputs.to(device)
@@ -80,6 +82,7 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
 
         # Make predictions for this batch
         outputs = model(inputs.cuda()).to(device)
+        print("outputs", torch.norm(outputs))
 
         # Compute the loss and its gradients
         loss = loss_fn(outputs.cuda(), labels.cuda()).to(device)
@@ -88,14 +91,14 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
         # Adjust learning weights
         optimizer.step()
 
-        # Gather data and report
+        # Gather data
         running_loss += loss.item()
-        if i % 1000 == 999:
-            last_loss = running_loss / 1000 # loss per batch
-            print('  batch {} loss: {}'.format(i + 1, last_loss))
-            tb_x = epoch_index * len(training_loader) + i + 1
-            wandb.log({"training loss": last_loss})
-            running_loss = 0.
+        print("running loss:",running_loss)
+
+    # Report loss at end of loop
+    last_loss = running_loss / len(training_loader) # loss per batch
+    print('  batch {} loss: {}'.format(i + 1, last_loss))
+    running_loss = 0.
 
     return last_loss
 
@@ -106,7 +109,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 epoch_number = 0
 
-EPOCHS = 1
+EPOCHS = 3
 
 best_vloss = 1_000_000.
 
@@ -121,17 +124,23 @@ for epoch in range(EPOCHS):
     model.train(False)
 
     running_vloss = 0.0
-    for i, vdata in enumerate(validation_loader):
-        vinputs, vlabels = vdata
-        voutputs = model(vinputs)
-        vloss = loss_fn(voutputs, vlabels)
-        running_vloss += vloss
+    with torch.no_grad():
+        for i, vdata in enumerate(validation_loader):
+            vinputs, vlabels = vdata
+            vinputs.to(device)
+            vlabels.to(device)
+            voutputs = model(vinputs.cuda()).to(device)
+            print("voutputs", torch.norm(voutputs))
+            vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
+            running_vloss += vloss.item()
+            print("running vloss:",running_vloss)
 
-    avg_vloss = running_vloss / (i + 1)
+    avg_vloss = running_vloss / len(validation_loader)
     print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
 
     # Log the running loss averaged per batch
     # for both training and validation
+    wandb.log({"training loss": avg_loss})
     wandb.log({"validation loss": avg_vloss})
 
     # Track best performance, and save the model's state

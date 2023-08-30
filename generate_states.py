@@ -2,6 +2,7 @@ import numpy as np
 import splearn
 from splearn.datasets.base import load_data_sample
 from tqdm import tqdm
+from pathlib import Path
 
 def get_states(input, wfa):
     out = wfa.initial 
@@ -18,9 +19,12 @@ def get_states(input, wfa):
 
 
 if __name__ == "__main__":
+    # Load data from files
+    home = str(Path.home())
+
     # get data path
-    INPUT_PATH = '/Users/michaelrizvi/data/PAutomaC-competition_sets/'
-    OUTPUT_PATH = '/Users/michaelrizvi/data/wfa2tf-data/'
+    OUTPUT_PATH = home + '/data/wfa2tf-data/'
+    INPUT_PATH = home + '/data/PAutomaC-competition_sets/'
 
     nb_models = 2
     for n in tqdm(range(1, nb_models+1)):
@@ -32,11 +36,6 @@ if __name__ == "__main__":
         # Get data from pautomac dataset
         train_data = load_data_sample(INPUT_PATH + train_file, filetype='Pautomac')
         test_data = load_data_sample(INPUT_PATH + test_file, filetype='Pautomac')
-
-        # Get targets for test
-        targets = open(INPUT_PATH + sols_file, "r")
-        targets.readline()
-        target_probas = [float(line[:-1]) for line in targets]
 
         # Extract weights from pautomac dataset
         wfa = splearn.Automaton.load_Pautomac_Automaton(INPUT_PATH + model_name)

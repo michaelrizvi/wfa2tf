@@ -162,9 +162,13 @@ cython_debug/
 
 # Pytorch logs
 runs
+model*
 
 # VS Code docs
 .vscode
 
 # Wandb stuff
 wandb/
+
+# SLURM stuff
+slurm*
