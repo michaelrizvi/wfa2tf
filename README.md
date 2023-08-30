@@ -11,8 +11,6 @@ Insert text here
 
 ### Dependencies
 
-* Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-* ex. Windows 10
 This project uses Python 3.8. To install Python 3.8 follow the instructions below
 * Mac: Type `brew install python@3.8` into your terminal
 * PC: ...
