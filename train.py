@@ -20,6 +20,28 @@ run = wandb.init(project="wfa2tf")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
+
+class PautomacDataset(Dataset):
+    def __init__(self, label_path, data_path):
+        self.labels = np.load(label_path)
+        loaded_data = load_data_sample(datapath, filetype='Pautomac')
+        self.data_tensor = torch.LongTensor(loaded_data.data) + 1 #[N, seq_length]
+        self.nbL = loaded_data.nbL
+
+    def __len__(self):
+        return len(self.data_tensor[0])
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+        image = read_image(img_path)
+        label = self.img_labels.iloc[idx, 1]
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return image, label
+
+
 def load_data(datapath, labelpath):
     data = load_data_sample(datapath, filetype='Pautomac')
     labels = torch.Tensor(np.load(labelpath))
