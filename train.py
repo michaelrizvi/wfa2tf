@@ -1,11 +1,14 @@
 # Import stuff
 from tqdm import tqdm
 import sys
+import os
 import numpy as np
 from torch import Tensor
 import torch.nn.functional as f
 import torch
 from torch import nn
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
 from datetime import datetime
 from model import TransformerModel
 from splearn.datasets.base import load_data_sample
@@ -14,7 +17,9 @@ import wandb
 from pathlib import Path
 
 
-run = wandb.init(project="wfa2tf")
+os.environ["WANDB_MODE"]='offline'
+
+#run = wandb.init(project="wfa2tf")
 # TODO: add instructions in the readme to get the Pautomac dataset from CLI
 # TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
 
@@ -24,22 +29,16 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 class PautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
         self.labels = np.load(label_path)
-        loaded_data = load_data_sample(datapath, filetype='Pautomac')
+        loaded_data = load_data_sample(data_path, filetype='Pautomac')
         self.data_tensor = torch.LongTensor(loaded_data.data) + 1 #[N, seq_length]
         self.nbL = loaded_data.nbL
+        self.nbQ = self.labels.shape[2]
+        self.T = self.data_tensor.shape[1]
 
     def __len__(self):
-        return len(self.data_tensor[0])
-
+        return self.data_tensor.shape[0] 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
-        image = read_image(img_path)
-        label = self.img_labels.iloc[idx, 1]
-        if self.transform:
-            image = self.transform(image)
-        if self.target_transform:
-            label = self.target_transform(label)
-        return image, label
+        return self.data_tensor[idx], self.labels[idx]
 
 
 def load_data(datapath, labelpath):
@@ -65,24 +64,23 @@ INPUT_PATH = home + '/data/PAutomaC-competition_sets/'
 train_file = f'1.pautomac.train'
 test_file = f'1.pautomac.test'
 
+full_set = PautomacDataset(OUTPUT_PATH + y_train_file, INPUT_PATH + train_file)
+train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
+training_loader = DataLoader(train_set)
+validation_loader = DataLoader(validation_set)
 
-nbL, training_loader = load_data(INPUT_PATH+train_file, OUTPUT_PATH+y_train_file)
-x, y = next(iter(training_loader))
-#print('x',x)
-_, T, nbQ = y.shape
-_, validation_loader = load_data(INPUT_PATH+test_file, OUTPUT_PATH+y_test_file)
-
-ntokens = nbL + 1 # size of vocabulary
-emsize = 2*nbQ**2 + 2  # embedding dimension
-d_hid = 2*nbQ**2 + 2  # dimension of the feedforward network model in ``nn.TransformerEncoder``
-nlayers = int(np.floor(np.log(T)))  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+ntokens = full_set.nbL + 1 # size of vocabulary
+emsize = 2*full_set.nbQ**2 + 2  # embedding dimension
+d_hid = 2*full_set.nbQ**2 + 2  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+nlayers = int(np.floor(np.log(full_set.T)))  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
 nhead = 2  # number of heads in ``nn.MultiheadAttention``
 dropout = 0.2  # dropout probability
 
 model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, dropout).to(device)
-wandb.watch(model, log_freq=100)
+#wandb.watch(model, log_freq=100)
 
 loss_fn = nn.MSELoss(reduction='mean')
+
 # Define what to do for one epoch 
 def train_one_epoch(model, training_loader, optimizer, epoch_index):
     running_loss = 0.
@@ -92,8 +90,6 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
     # iter(training_loader) so that we can track the batch
     # index and do some intra-epoch reporting
     for i, data in enumerate(training_loader):
-        if i > 100:
-            break
         # Every data instance is an input + label pair
         inputs, labels = data
         inputs.to(device)
