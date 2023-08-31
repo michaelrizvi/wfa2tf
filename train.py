@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 
-run = wandb.init(project="wfa2tf")
+#run = wandb.init(project="wfa2tf")
 # TODO: add instructions in the readme to get the Pautomac dataset from CLI
 # TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
 
@@ -28,7 +28,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # Define Dataset object from labels and sequences
 class PautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
-        self.labels = np.load(label_path)
+        self.labels = np.load(label_path)[:,1:,:]
         loaded_data = load_data_sample(data_path, filetype='Pautomac')
         self.data_tensor = torch.LongTensor(loaded_data.data) + 1 #[N, seq_length]
         self.nbL = loaded_data.nbL
@@ -56,6 +56,8 @@ train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
 training_loader = DataLoader(train_set)
 validation_loader = DataLoader(validation_set)
 
+print(full_set.labels.shape)
+sys.exit(0)
 ntokens = full_set.nbL + 1 # size of vocabulary
 emsize = 2*full_set.nbQ**2 + 2  # embedding dimension
 d_hid = 2*full_set.nbQ**2 + 2  # dimension of the feedforward network model in ``nn.TransformerEncoder``
