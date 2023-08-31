@@ -17,15 +17,15 @@ import wandb
 from pathlib import Path
 
 
-os.environ["WANDB_MODE"]='offline'
 
-#run = wandb.init(project="wfa2tf")
+run = wandb.init(project="wfa2tf")
 # TODO: add instructions in the readme to get the Pautomac dataset from CLI
 # TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
+# Define Dataset object from labels and sequences
 class PautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
         self.labels = np.load(label_path)
@@ -39,19 +39,6 @@ class PautomacDataset(Dataset):
         return self.data_tensor.shape[0] 
     def __getitem__(self, idx):
         return self.data_tensor[idx], self.labels[idx]
-
-
-def load_data(datapath, labelpath):
-    data = load_data_sample(datapath, filetype='Pautomac')
-    labels = torch.Tensor(np.load(labelpath))
-    nbL = data.nbL
-    data_tensor = torch.LongTensor(data.data) + 1 # +1 is to remove negative values
-    data_list = []
-    for i in range(len(data_tensor)):
-        data_list.append([data_tensor[i], labels[i,1:,:]])
-    loader = torch.utils.data.DataLoader(data_list, shuffle=True, batch_size=32)
-    return nbL, loader
-
 
 # Load data from files
 home = str(Path.home())
