@@ -35,7 +35,7 @@ class PositionalEncoding(nn.Module):
 class TransformerModel(nn.Module):
 
     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
-                 nlayers: int, dropout: float = 0.5):
+            nlayers: int, nstates: int, dropout: float = 0.5):
         super().__init__()
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(d_model, dropout)
@@ -43,7 +43,7 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.embedding = nn.Embedding(ntoken, d_model) # PUT ACTUAL EMBEDDING WITH VEC(A) HERE??
         self.d_model = d_model
-        self.linear = nn.Linear(d_model, 63) # magic number to get states from vectorized matrix
+        self.linear = nn.Linear(d_model, nstates) # magic number to get states from vectorized matrix
 
         self.init_weights()
 

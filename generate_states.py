@@ -26,8 +26,8 @@ if __name__ == "__main__":
     OUTPUT_PATH = home + '/data/wfa2tf-data/'
     INPUT_PATH = home + '/data/PAutomaC-competition_sets/'
 
-    nb_models = 2
-    for n in tqdm(range(1, nb_models+1)):
+    nb_models = 1
+    for n in tqdm(range(42, nb_models+42)):
         model_name = f'{n}.pautomac_model.txt'
         train_file = f'{n}.pautomac.train'
         test_file = f'{n}.pautomac.test'

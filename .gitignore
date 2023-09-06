@@ -168,7 +168,8 @@ model*
 .vscode
 
 # Wandb stuff
-wandb/
+wandb/*
+wandb/latest-run
 
 # SLURM stuff
 slurm*

@@ -19,19 +19,18 @@ from pathlib import Path
 
 
 run = wandb.init(project="wfa2tf")
-# TODO: add instructions in the readme to get the Pautomac dataset from CLI
-# TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
+
+# TODO: change dataset class to incorporate synthetic data instead
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 # Define Dataset object from labels and sequences
-class PautomacDataset(Dataset):
+class SyntheticPautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
         self.labels = torch.Tensor(np.load(label_path)[:,1:,:])
-        loaded_data = load_data_sample(data_path, filetype='Pautomac')
-        self.data_tensor = torch.LongTensor(loaded_data.data) + 1 #[N, seq_length]
-        self.nbL = loaded_data.nbL
+        self.data_tensor = torch.LongTensor(np.load(data_path)) + 1 #[N, seq_length]
+        self.nbL = int(torch.max(self.data_tensor))
         self.nbQ = self.labels.shape[2]
         self.T = self.data_tensor.shape[1]
 
@@ -41,18 +40,18 @@ class PautomacDataset(Dataset):
         return self.data_tensor[idx], self.labels[idx]
 
 # Load data from files
+nb_aut = 42
+nbEx = 10000
+seq_len = 16
 home = str(Path.home())
 
-nb_aut = 42
 OUTPUT_PATH = home + '/data/wfa2tf-data/'
-y_train_file = f'{nb_aut}.pautomac_states_train.npy'
-y_test_file = f'{nb_aut}.pautomac_states_test.npy'
+y_train_file = f'{nb_aut}.pautomac_synth_states_len{seq_len}_size{nbEx}.npy'
 
-INPUT_PATH = home + '/data/PAutomaC-competition_sets/'
-train_file = f'{nb_aut}.pautomac.train'
-test_file = f'{nb_aut}.pautomac.test'
+INPUT_PATH = OUTPUT_PATH
+train_file = f'{nb_aut}.pautomac_synth_data_len{seq_len}_size{nbEx}.npy'
 
-full_set = PautomacDataset(OUTPUT_PATH + y_train_file, INPUT_PATH + train_file)
+full_set = SyntheticPautomacDataset(OUTPUT_PATH + y_train_file, INPUT_PATH + train_file)
 train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
 training_loader = DataLoader(train_set)
 validation_loader = DataLoader(validation_set)
@@ -99,7 +98,7 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
 
         # Gather data
         running_loss += loss.item()
-        print("running loss:", running_loss)
+        print(running_loss)
 
     # Report loss at end of loop
     last_loss = running_loss / len(training_loader) # loss per batch
@@ -116,7 +115,7 @@ optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 epoch_number = 0
 
-EPOCHS = 5
+EPOCHS = 3
 
 best_vloss = 1_000_000.
 
@@ -127,7 +126,7 @@ for epoch in range(EPOCHS):
     avg_loss = train_one_epoch(model, training_loader, optimizer, epoch)
 
     # We don't need gradients on to do reporting
-    #model.eval()
+    model.eval()
 
     running_vloss = 0.0
     with torch.no_grad():
