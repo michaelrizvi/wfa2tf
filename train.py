@@ -16,6 +16,8 @@ import torch.nn.functional as F
 import wandb
 from pathlib import Path
 
+torch.manual_seed(421)
+
 
 
 run = wandb.init(project="wfa2tf")
@@ -99,7 +101,7 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
 
         # Gather data
         running_loss += loss.item()
-        print("running loss:", running_loss)
+        #print("running loss:", running_loss)
 
     # Report loss at end of loop
     last_loss = running_loss / len(training_loader) # loss per batch
@@ -127,9 +129,10 @@ for epoch in range(EPOCHS):
     avg_loss = train_one_epoch(model, training_loader, optimizer, epoch)
 
     # We don't need gradients on to do reporting
-    #model.eval()
+    model.eval()
 
     running_vloss = 0.0
+    running_tloss = 0.0
     with torch.no_grad():
         for i, vdata in enumerate(validation_loader):
             vinputs, vlabels = vdata
@@ -138,14 +141,22 @@ for epoch in range(EPOCHS):
             voutputs = model(vinputs.cuda()).to(device)
             vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
             running_vloss += vloss.item()
+        for i, tdata in enumerate(training_loader):
+            tinputs, tlabels = tdata
+            tinputs.to(device)
+            tlabels.to(device)
+            toutputs = model(tinputs.cuda()).to(device)
+            tloss = loss_fn(toutputs.cuda(), tlabels.cuda()).to(device)
+            running_tloss += tloss.item()
 
     avg_vloss = running_vloss / len(validation_loader)
-    print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+    avg_tloss = running_tloss / len(training_loader)
+    print('LOSS train {} valid {}'.format(avg_tloss, avg_vloss))
 
     # Log the running loss averaged per batch
     # for both training and validation
-    wandb.log({"training loss": avg_loss})
-    wandb.log({"validation loss": avg_vloss})
+    wandb.log({"training loss": avg_tloss}, step=epoch)
+    wandb.log({"validation loss": avg_vloss}, step=epoch)
 
     # Track best performance, and save the model's state
     #if avg_vloss < best_vloss:
