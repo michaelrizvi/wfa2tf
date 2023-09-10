@@ -15,136 +15,168 @@ from splearn.datasets.base import load_data_sample
 import torch.nn.functional as F
 import wandb
 from pathlib import Path
+from options import parse_option
 
-torch.manual_seed(420)
-run = wandb.init(project="wfa2tf")
+USE_WANDB = True
 
-# TODO: change dataset class to incorporate synthetic data instead
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Define Dataset object from labels and sequences
 class SyntheticPautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
-        self.labels = torch.Tensor(np.load(label_path)[:,1:,:])
-        self.data_tensor = torch.LongTensor(np.load(data_path)) + 1 #[N, seq_length]
+        self.labels = torch.Tensor(np.load(label_path)[:, 1:, :])
+        self.data_tensor = torch.LongTensor(np.load(data_path)) + 1  # [N, seq_length]
         self.nbL = int(torch.max(self.data_tensor))
         self.nbQ = self.labels.shape[2]
         self.T = self.data_tensor.shape[1]
 
     def __len__(self):
-        return self.data_tensor.shape[0] 
+        return self.data_tensor.shape[0]
+
     def __getitem__(self, idx):
         return self.data_tensor[idx], self.labels[idx]
 
-# Load data from files
-nbEx = 10000
-seq_len = 16
-home = str(Path.home())
 
-OUTPUT_PATH = home + '/data/wfa2tf-data/'
-y_train_file = f'counting_wfa_states_len{seq_len}_size{nbEx}.npy'
+def main():
+    def reinit_wandb():
+        run = wandb.init(reinit=True, tags=[opt.tag])
+        wandb.config.update(opt, allow_val_change=True)
+        return run
 
-INPUT_PATH = OUTPUT_PATH
-train_file = f'counting_wfa_data_len{seq_len}_size{nbEx}.npy'
+    # Get cmd line args
+    opt = parse_option()
 
-full_set = SyntheticPautomacDataset(OUTPUT_PATH + y_train_file, INPUT_PATH + train_file)
-train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
-training_loader = DataLoader(train_set, batch_size=16, shuffle=True)
-validation_loader = DataLoader(validation_set, batch_size=16, shuffle=True)
+    # Set the seed
+    torch.manual_seed(opt.seed)
 
-ntokens = full_set.nbL + 1 # size of vocabulary
-emsize = 2*full_set.nbQ**2 + 2  # embedding dimension
-d_hid = emsize  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+    # Make sure to use CUDA if possible
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-nlayers = int(np.floor(np.log(full_set.T)))  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
-nhead = 2  # number of heads in ``nn.MultiheadAttention``
-dropout = 0.2  # dropout probability
+    # Load data from files
+    nbEx = 10000
+    seq_len = 16
+    home = str(Path.home())
 
-model = TransformerModel(ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout).to(device)
-#wandb.watch(model, log_freq=100)
+    OUTPUT_PATH = home + "/data/wfa2tf-data/"
+    y_train_file = f"counting_wfa_states_len{seq_len}_size{nbEx}.npy"
 
-loss_fn = nn.MSELoss(reduction='mean')
+    INPUT_PATH = OUTPUT_PATH
+    train_file = f"counting_wfa_data_len{seq_len}_size{nbEx}.npy"
 
-# Define what to do for one epoch 
-def train_one_epoch(model, training_loader, optimizer, epoch_index):
-    running_loss = 0.
-    last_loss = 0.
+    full_set = SyntheticPautomacDataset(
+        OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
+    )
+    train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
+    training_loader = DataLoader(train_set, batch_size=opt.batch_size, shuffle=True)
+    validation_loader = DataLoader(
+        validation_set, batch_size=opt.batch_size, shuffle=True
+    )
 
-    # Here, we use enumerate(training_loader) instead of
-    # iter(training_loader) so that we can track the batch
-    # index and do some intra-epoch reporting
-    for i, data in enumerate(training_loader):
-        # Every data instance is an input + label pair
-        inputs, labels = data
-        inputs.to(device)
-        labels.to(device)
+    ntokens = full_set.nbL + 1  # size of vocabulary
+    emsize = 2 * full_set.nbQ**2 + 2  # embedding dimension
+    d_hid = emsize  # dimension of the feedforward network model in ``nn.TransformerEncoder``
 
-        # Zero your gradients for every batch!
-        optimizer.zero_grad()
+    nlayers = int(
+        np.floor(np.log(full_set.T))
+    )  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+    nhead = 2  # number of heads in ``nn.MultiheadAttention``
+    dropout = opt.dropout  # dropout probability
 
-        # Make predictions for this batch
-        outputs = model(inputs.cuda()).to(device)
+    model = TransformerModel(
+        ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout
+    ).to(device)
 
-        # Compute the loss and its gradients
-        loss = loss_fn(outputs.cuda(), labels.cuda()).to(device)
-        loss.backward()
+    loss_fn = nn.MSELoss(reduction="mean")
 
-        # Adjust learning weights
-        optimizer.step()
+    # Define what to do for one epoch
+    def train_one_epoch(model, training_loader, optimizer, epoch_index):
+        running_loss = 0.0
+        last_loss = 0.0
 
-        # Gather data
-        running_loss += loss.item()
+        # Here, we use enumerate(training_loader) instead of
+        # iter(training_loader) so that we can track the batch
+        # index and do some intra-epoch reporting
+        for i, data in enumerate(training_loader):
+            # Every data instance is an input + label pair
+            inputs, labels = data
+            inputs.to(device)
+            labels.to(device)
 
-    # Report loss at end of loop
-    last_loss = running_loss / len(training_loader) # loss per batch
-    print('training loss: {}'.format(last_loss))
-    running_loss = 0.
+            # Zero your gradients for every batch!
+            optimizer.zero_grad()
 
-    return last_loss
+            # Make predictions for this batch
+            outputs = model(inputs.cuda()).to(device)
 
+            # Compute the loss and its gradients
+            loss = loss_fn(outputs.cuda(), labels.cuda()).to(device)
+            loss.backward()
 
-### TRAIN THE MODEL ### 
-optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+            # Adjust learning weights
+            optimizer.step()
 
-timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-epoch_number = 0
+            # Gather data
+            running_loss += loss.item()
 
-EPOCHS = 20
+        # Report loss at end of loop
+        last_loss = running_loss / len(training_loader)  # loss per batch
+        print("training loss: {}".format(last_loss))
+        running_loss = 0.0
 
-best_vloss = 1_000_000.
+        return last_loss
 
-for epoch in range(EPOCHS):
-    print('EPOCH {}:'.format(epoch_number + 1))
-    # Make sure gradient tracking is on, and do a pass over the data
-    model.train()
-    avg_loss = train_one_epoch(model, training_loader, optimizer, epoch)
+    ### TRAIN THE MODEL ###
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    # We don't need gradients on to do reporting
-    model.eval()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    epoch_number = 0
 
-    running_vloss = 0.0
-    with torch.no_grad():
-        for i, vdata in enumerate(validation_loader):
-            vinputs, vlabels = vdata
-            vinputs.to(device)
-            vlabels.to(device)
-            voutputs = model(vinputs.cuda()).to(device)
-            vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
-            running_vloss += vloss.item()
+    EPOCHS = opt.epochs
 
-    avg_vloss = running_vloss / len(validation_loader)
-    print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
+    best_vloss = 1_000_000.0
 
-    # Log the running loss averaged per batch
-    # for both training and validation
-    wandb.log({"training loss": avg_loss}, step=epoch)
-    wandb.log({"validation loss": avg_vloss}, step=epoch)
+    # Setup wandb
+    USE_WANDB = opt.use_wandb
+    run = wandb.init(project="wfa2tf")
+    wandb.run.name = f"T={T},nQ={full_set.nbQ},pochs={EPOCHS},dropout={dropout},batchsize={opt.batch_size}"
+    print("seed", opt.seed)
+    print("epochs", opt.epochs)
+    print("batchsize", opt.batch_size)
 
-    # Track best performance, and save the model's state
-    #if avg_vloss < best_vloss:
-    #    best_vloss = avg_vloss
-    #    model_path = 'model_{}_{}'.format(timestamp, epoch_number)
-    #    torch.save(model.state_dict(), model_path)
+    for epoch in range(EPOCHS):
+        print("EPOCH {}:".format(epoch_number + 1))
+        # Make sure gradient tracking is on, and do a pass over the data
+        model.train()
+        avg_loss = train_one_epoch(model, training_loader, optimizer, epoch)
+
+        # We don't need gradients on to do reporting
+        model.eval()
+
+        running_vloss = 0.0
+        with torch.no_grad():
+            for i, vdata in enumerate(validation_loader):
+                vinputs, vlabels = vdata
+                vinputs.to(device)
+                vlabels.to(device)
+                voutputs = model(vinputs.cuda()).to(device)
+                vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
+                running_vloss += vloss.item()
+
+        avg_vloss = running_vloss / len(validation_loader)
+        print("LOSS train {} valid {}".format(avg_loss, avg_vloss))
+
+        # Log the running loss averaged per batch
+        # for both training and validation
+        wandb.log({"training loss": avg_loss}, step=epoch)
+        wandb.log({"validation loss": avg_vloss}, step=epoch)
+
+        # Track best performance, and save the model's state
+        # if avg_vloss < best_vloss:
+        #    best_vloss = avg_vloss
+        #    model_path = 'model_{}_{}'.format(timestamp, epoch_number)
+        #    torch.save(model.state_dict(), model_path)
 
     epoch_number += 1
+
+
+if __name__ == "__main__":
+    main()
