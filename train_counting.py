@@ -16,24 +16,19 @@ import torch.nn.functional as F
 import wandb
 from pathlib import Path
 
-torch.manual_seed(421)
-
-
-
+torch.manual_seed(420)
 run = wandb.init(project="wfa2tf")
-# TODO: add instructions in the readme to get the Pautomac dataset from CLI
-# TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
+
+# TODO: change dataset class to incorporate synthetic data instead
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-
 # Define Dataset object from labels and sequences
-class PautomacDataset(Dataset):
+class SyntheticPautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
         self.labels = torch.Tensor(np.load(label_path)[:,1:,:])
-        loaded_data = load_data_sample(data_path, filetype='Pautomac')
-        self.data_tensor = torch.LongTensor(loaded_data.data) + 1 #[N, seq_length]
-        self.nbL = loaded_data.nbL
+        self.data_tensor = torch.LongTensor(np.load(data_path)) + 1 #[N, seq_length]
+        self.nbL = int(torch.max(self.data_tensor))
         self.nbQ = self.labels.shape[2]
         self.T = self.data_tensor.shape[1]
 
@@ -43,21 +38,20 @@ class PautomacDataset(Dataset):
         return self.data_tensor[idx], self.labels[idx]
 
 # Load data from files
+nbEx = 10000
+seq_len = 16
 home = str(Path.home())
 
-nb_aut = 42
 OUTPUT_PATH = home + '/data/wfa2tf-data/'
-y_train_file = f'{nb_aut}.pautomac_states_train.npy'
-y_test_file = f'{nb_aut}.pautomac_states_test.npy'
+y_train_file = f'counting_wfa_states_len{seq_len}_size{nbEx}.npy'
 
-INPUT_PATH = home + '/data/PAutomaC-competition_sets/'
-train_file = f'{nb_aut}.pautomac.train'
-test_file = f'{nb_aut}.pautomac.test'
+INPUT_PATH = OUTPUT_PATH
+train_file = f'counting_wfa_data_len{seq_len}_size{nbEx}.npy'
 
-full_set = PautomacDataset(OUTPUT_PATH + y_train_file, INPUT_PATH + train_file)
+full_set = SyntheticPautomacDataset(OUTPUT_PATH + y_train_file, INPUT_PATH + train_file)
 train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
-training_loader = DataLoader(train_set)
-validation_loader = DataLoader(validation_set)
+training_loader = DataLoader(train_set, batch_size=16, shuffle=True)
+validation_loader = DataLoader(validation_set, batch_size=16, shuffle=True)
 
 ntokens = full_set.nbL + 1 # size of vocabulary
 emsize = 2*full_set.nbQ**2 + 2  # embedding dimension
@@ -101,7 +95,6 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
 
         # Gather data
         running_loss += loss.item()
-        #print("running loss:", running_loss)
 
     # Report loss at end of loop
     last_loss = running_loss / len(training_loader) # loss per batch
@@ -113,12 +106,11 @@ def train_one_epoch(model, training_loader, optimizer, epoch_index):
 
 ### TRAIN THE MODEL ### 
 optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-#optimizer = torch.optim.Adam(model.paramaters())
 
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 epoch_number = 0
 
-EPOCHS = 1
+EPOCHS = 20
 
 best_vloss = 1_000_000.
 
@@ -132,31 +124,21 @@ for epoch in range(EPOCHS):
     model.eval()
 
     running_vloss = 0.0
-    running_tloss = 0.0
     with torch.no_grad():
         for i, vdata in enumerate(validation_loader):
             vinputs, vlabels = vdata
             vinputs.to(device)
             vlabels.to(device)
             voutputs = model(vinputs.cuda()).to(device)
-            voutputs = torch.zeros_like(voutputs)
             vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
             running_vloss += vloss.item()
-#        for i, tdata in enumerate(training_loader):
-#            tinputs, tlabels = tdata
-#            tinputs.to(device)
-#            tlabels.to(device)
-#            toutputs = model(tinputs.cuda()).to(device)
-#            tloss = loss_fn(toutputs.cuda(), tlabels.cuda()).to(device)
-#            running_tloss += tloss.item()
 
     avg_vloss = running_vloss / len(validation_loader)
-    avg_tloss = running_tloss / len(training_loader)
-    print('LOSS train {} valid {}'.format(avg_tloss, avg_vloss))
+    print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
 
     # Log the running loss averaged per batch
     # for both training and validation
-    wandb.log({"training loss": avg_tloss}, step=epoch)
+    wandb.log({"training loss": avg_loss}, step=epoch)
     wandb.log({"validation loss": avg_vloss}, step=epoch)
 
     # Track best performance, and save the model's state
