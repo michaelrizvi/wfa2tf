@@ -66,9 +66,9 @@ def main():
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
     )
     train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
-    training_loader = DataLoader(train_set, batch_size=opt.batch_size, shuffle=True)
+    training_loader = DataLoader(train_set, batch_size=opt.batchsize, shuffle=True)
     validation_loader = DataLoader(
-        validation_set, batch_size=opt.batch_size, shuffle=True
+        validation_set, batch_size=opt.batchsize, shuffle=True
     )
 
     ntokens = full_set.nbL + 1  # size of vocabulary
@@ -125,7 +125,7 @@ def main():
         return last_loss
 
     ### TRAIN THE MODEL ###
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     epoch_number = 0
@@ -137,10 +137,7 @@ def main():
     # Setup wandb
     USE_WANDB = opt.use_wandb
     run = wandb.init(project="wfa2tf")
-    wandb.run.name = f"T={T},nQ={full_set.nbQ},pochs={EPOCHS},dropout={dropout},batchsize={opt.batch_size}"
-    print("seed", opt.seed)
-    print("epochs", opt.epochs)
-    print("batchsize", opt.batch_size)
+    wandb.run.name = f"T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}"
 
     for epoch in range(EPOCHS):
         print("EPOCH {}:".format(epoch_number + 1))
@@ -175,7 +172,7 @@ def main():
         #    model_path = 'model_{}_{}'.format(timestamp, epoch_number)
         #    torch.save(model.state_dict(), model_path)
 
-    epoch_number += 1
+        epoch_number += 1
 
 
 if __name__ == "__main__":

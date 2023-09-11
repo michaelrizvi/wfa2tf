@@ -173,3 +173,6 @@ wandb/latest-run
 
 # SLURM stuff
 slurm*
+.onager/*
+job_error.txt
+job_output.txt
