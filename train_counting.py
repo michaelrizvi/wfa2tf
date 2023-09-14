@@ -132,12 +132,13 @@ def main():
 
     EPOCHS = opt.epochs
 
-    best_vloss = 1_000_000.0
+    best_vloss = 1_000_000
 
     # Setup wandb
+    automata_name = "counting wfa"
     USE_WANDB = opt.use_wandb
     run = wandb.init(project="wfa2tf")
-    wandb.run.name = f"T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}"
+    wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}"
 
     for epoch in range(EPOCHS):
         print("EPOCH {}:".format(epoch_number + 1))
