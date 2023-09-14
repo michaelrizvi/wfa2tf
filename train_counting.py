@@ -76,8 +76,11 @@ def main():
     d_hid = emsize  # dimension of the feedforward network model in ``nn.TransformerEncoder``
 
     nlayers = int(
-        np.floor(np.log(full_set.T))
+        np.floor(np.log2(full_set.T))
     )  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+    print(full_set.T)
+    print(nlayers)
+    sys.exit(0)
     nhead = 2  # number of heads in ``nn.MultiheadAttention``
     dropout = opt.dropout  # dropout probability
 
