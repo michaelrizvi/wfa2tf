@@ -17,14 +17,14 @@ import wandb
 from pathlib import Path
 from options import parse_option
 
-USE_WANDB = True
+USE_WANDB = False
 
 
 # Define Dataset object from labels and sequences
 class SyntheticPautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
         self.labels = torch.Tensor(np.load(label_path)[:, 1:, :])
-        self.data_tensor = torch.LongTensor(np.load(data_path)) + 1  # [N, seq_length]
+        self.data_tensor = torch.LongTensor(np.load(data_path))# [N, seq_length]
         self.nbL = int(torch.max(self.data_tensor))
         self.nbQ = self.labels.shape[2]
         self.T = self.data_tensor.shape[1]
@@ -52,8 +52,8 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Load data from files
-    nbEx = 10000
-    seq_len = 16
+    nbEx = opt.nbEx
+    seq_len = 16 
     home = str(Path.home())
 
     OUTPUT_PATH = home + "/data/wfa2tf-data/"
@@ -65,30 +65,29 @@ def main():
     full_set = SyntheticPautomacDataset(
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
     )
-    train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
+    train_set, validation_set, test_set = torch.utils.data.random_split(full_set, [0.8, 0.1, 0.1])
+
     training_loader = DataLoader(train_set, batch_size=opt.batchsize, shuffle=True)
-    validation_loader = DataLoader(
-        validation_set, batch_size=opt.batchsize, shuffle=True
-    )
+    validation_loader = DataLoader(validation_set, batch_size=opt.batchsize, shuffle=True)
+    test_loader = DataLoader(test_set, batch_size=opt.batchsize, shuffle=True)
 
     ntokens = full_set.nbL + 1  # size of vocabulary
-    emsize = 2 * full_set.nbQ**2 + 2  # embedding dimension
-    d_hid = emsize  # dimension of the feedforward network model in ``nn.TransformerEncoder``
-
-    nlayers = int(
-        np.floor(np.log2(full_set.T))
-    )  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
-    print(full_set.T)
-    print(nlayers)
-    sys.exit(0)
+    emsize = 128  # embedding dimension
+    #d_hid = 2 * full_set.nbQ**2 + 2  # dimension of the feedforward network model in ``nn.TransformerEncoder``
+    d_hid = 512
+#    nlayers = int(
+#        np.floor(np.log2(full_set.T))
+#    )  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
+    nlayers = opt.nlayers
     nhead = 2  # number of heads in ``nn.MultiheadAttention``
     dropout = opt.dropout  # dropout probability
 
     model = TransformerModel(
         ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout
     ).to(device)
-
-    loss_fn = nn.MSELoss(reduction="mean")
+    
+    #loss_fn = nn.MSELoss()
+    loss_fn = nn.L1Loss()
 
     # Define what to do for one epoch
     def train_one_epoch(model, training_loader, optimizer, epoch_index):
@@ -109,9 +108,10 @@ def main():
 
             # Make predictions for this batch
             outputs = model(inputs.cuda()).to(device)
+#            print(outputs)
 
             # Compute the loss and its gradients
-            loss = loss_fn(outputs.cuda(), labels.cuda()).to(device)
+            loss = loss_fn(outputs.cuda()[:,:,0].squeeze(), labels.cuda()[:,:,0].squeeze()).to(device)
             loss.backward()
 
             # Adjust learning weights
@@ -126,9 +126,30 @@ def main():
         running_loss = 0.0
 
         return last_loss
+    def validate_one_epoch(model, loader, loss_fn, is_eval =False):
+        running_loss = 0.0
+        with torch.no_grad():
+            for i, data in enumerate(loader):
+                inputs, labels = data
+                inputs.to(device)
+                labels.to(device)
+                outputs = model(inputs.cuda()).to(device)
+                if is_eval:
+                    outputs = torch.round(outputs)
+                if (i == 0 or i == len(loader) - 1) and is_eval==True:
+                    print("inputs:", inputs)
+                    print("outputs: ",outputs)
+                    print("labels", labels)
+                    print("diff: ",loss_fn(outputs.cuda(), labels.cuda()))
+                loss = loss_fn(outputs.cuda(), labels.cuda()).to(device)
+                running_loss += loss.item()
+
+        avg_loss = running_loss / len(loader)
+        return avg_loss
 
     ### TRAIN THE MODEL ###
     optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9)
+    #optimizer = torch.optim.Adam(model.parameters())
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     epoch_number = 0
@@ -141,7 +162,7 @@ def main():
     automata_name = "counting wfa"
     USE_WANDB = opt.use_wandb
     run = wandb.init(project="wfa2tf")
-    wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}"
+    wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}, nlayers={opt.nlayers}"
 
     for epoch in range(EPOCHS):
         print("EPOCH {}:".format(epoch_number + 1))
@@ -151,18 +172,7 @@ def main():
 
         # We don't need gradients on to do reporting
         model.eval()
-
-        running_vloss = 0.0
-        with torch.no_grad():
-            for i, vdata in enumerate(validation_loader):
-                vinputs, vlabels = vdata
-                vinputs.to(device)
-                vlabels.to(device)
-                voutputs = model(vinputs.cuda()).to(device)
-                vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
-                running_vloss += vloss.item()
-
-        avg_vloss = running_vloss / len(validation_loader)
+        avg_vloss = validate_one_epoch(model, validation_loader, loss_fn)
         print("LOSS train {} valid {}".format(avg_loss, avg_vloss))
 
         # Log the running loss averaged per batch
@@ -177,6 +187,11 @@ def main():
         #    torch.save(model.state_dict(), model_path)
 
         epoch_number += 1
+
+    # Evaluation on the test set
+    test_loss = validate_one_epoch(model, test_loader, loss_fn, is_eval=True)
+    wandb.log({"test loss": test_loss}, step=epoch)
+    
 
 
 if __name__ == "__main__":

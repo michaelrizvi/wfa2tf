@@ -11,7 +11,7 @@ def parse_option():
     parser.add_argument('--seed', type=int, default=0,
                         help='seed')
 
-    parser.add_argument('--epochs', type=int, default=10,
+    parser.add_argument('--epochs', type=int, default=15,
                         help='number of training epochs for SGD / max iterations for ALS')
 
     parser.add_argument('--batchsize', type=int, default=16,
@@ -25,7 +25,11 @@ def parse_option():
 
     parser.add_argument('--use_wandb', type=bool, default=False)
 
+    parser.add_argument('--nlayers', type=int, default=4,
+                        help="number of layers for the transformer")
 
+    parser.add_argument('--nbEx', type=int, default=10000,
+                        help="number of examples in the training set")
     opt = parser.parse_args()
 
     return opt

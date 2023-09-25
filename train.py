@@ -18,8 +18,6 @@ from pathlib import Path
 
 torch.manual_seed(421)
 
-
-
 run = wandb.init(project="wfa2tf")
 # TODO: add instructions in the readme to get the Pautomac dataset from CLI
 # TODO: host synthetic data on udem webpage & put readme instructions to get them from CLI
@@ -55,7 +53,7 @@ train_file = f'{nb_aut}.pautomac.train'
 test_file = f'{nb_aut}.pautomac.test'
 
 full_set = PautomacDataset(OUTPUT_PATH + y_train_file, INPUT_PATH + train_file)
-train_set, validation_set = torch.utils.data.random_split(full_set, [0.8, 0.2])
+train_set, validation_set = torch.utils.data.random_split(full_set, [0.1, 0.9])
 training_loader = DataLoader(train_set)
 validation_loader = DataLoader(validation_set)
 
@@ -134,21 +132,21 @@ for epoch in range(EPOCHS):
     running_vloss = 0.0
     running_tloss = 0.0
     with torch.no_grad():
-        for i, vdata in enumerate(validation_loader):
-            vinputs, vlabels = vdata
-            vinputs.to(device)
-            vlabels.to(device)
-            voutputs = model(vinputs.cuda()).to(device)
-            voutputs = torch.zeros_like(voutputs)
-            vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
-            running_vloss += vloss.item()
-#        for i, tdata in enumerate(training_loader):
-#            tinputs, tlabels = tdata
-#            tinputs.to(device)
-#            tlabels.to(device)
-#            toutputs = model(tinputs.cuda()).to(device)
-#            tloss = loss_fn(toutputs.cuda(), tlabels.cuda()).to(device)
-#            running_tloss += tloss.item()
+#        for i, vdata in enumerate(validation_loader):
+#            vinputs, vlabels = vdata
+#            vinputs.to(device)
+#            vlabels.to(device)
+#            voutputs = model(vinputs.cuda()).to(device)
+#            voutputs = torch.zeros_like(voutputs)
+#            vloss = loss_fn(voutputs.cuda(), vlabels.cuda()).to(device)
+#            running_vloss += vloss.item()
+        for i, tdata in enumerate(training_loader):
+            tinputs, tlabels = tdata
+            tinputs.to(device)
+            tlabels.to(device)
+            toutputs = model(tinputs.cuda()).to(device)
+            tloss = loss_fn(toutputs.cuda(), tlabels.cuda()).to(device)
+            running_tloss += tloss.item()
 
     avg_vloss = running_vloss / len(validation_loader)
     avg_tloss = running_tloss / len(training_loader)
@@ -157,7 +155,7 @@ for epoch in range(EPOCHS):
     # Log the running loss averaged per batch
     # for both training and validation
     wandb.log({"training loss": avg_tloss}, step=epoch)
-    wandb.log({"validation loss": avg_vloss}, step=epoch)
+#    wandb.log({"validation loss": avg_vloss}, step=epoch)
 
     # Track best performance, and save the model's state
     #if avg_vloss < best_vloss:
