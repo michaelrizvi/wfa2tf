@@ -43,12 +43,12 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.embedding = nn.Embedding(ntoken, d_model) # PUT ACTUAL EMBEDDING WITH VEC(A) HERE??
         self.d_model = d_model
-        self.linear = nn.Linear(d_model, nstates) 
+        self.linear = nn.Linear(d_model, nstates-1) 
 
         self.init_weights()
 
     def init_weights(self) -> None:
-        initrange = 0.1
+        initrange = 1
         self.embedding.weight.data.uniform_(-initrange, initrange)
         self.linear.bias.data.zero_()
         self.linear.weight.data.uniform_(-initrange, initrange)
@@ -62,11 +62,18 @@ class TransformerModel(nn.Module):
         Returns:
             output Tensor of shape ``[seq_len, batch_size, ntoken]``
         """
-        src = self.embedding(src)
+        #src = self.embedding(src)
+        src = embed(src)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_mask)
         output = self.linear(output)
         return output
+
+def embed(src):
+    W = torch.tensor([[1,0,1,1],[1,0,0,1]])
+    src = torch.nn.functional.one_hot(src)
+    src = src@W
+    return src
 
 
 

@@ -33,16 +33,19 @@ if __name__ == "__main__":
     wfa = splearn.automaton.Automaton(nbL=2, nbS=2, initial=initial,
             final=final, transitions=transitions)
 
-    nbEx = 10
+    nbEx = 1
     T = 16 
     # Create data tensor
     test_examples_tensor = np.random.randint(wfa.nbL, size=(nbEx, T)) # Maybe there is a better way to generate the data?
     # Does not sample from the "mode" of the data distribution!!!
-    np.save(OUTPUT_PATH + f'counting_wfa_data_len{T}_size{nbEx}.npy', test_examples_tensor)
-
+    #np.save(OUTPUT_PATH + f'counting_wfa_data_len{T}_size{nbEx}.npy', test_examples_tensor)
+    np.savetxt(OUTPUT_PATH + f'counting_wfa_data_len{T}_size{nbEx}.txt', test_examples_tensor)
+    print(test_examples_tensor[0])
     # Compute states for the data
     test_data_tensor = np.zeros((nbEx, T+1, wfa.nbS))
     for i in range(nbEx):
         test_data_tensor[i] = get_states(test_examples_tensor[i], wfa)
 
-    np.save(OUTPUT_PATH + f'counting_wfa_states_len{T}_size{nbEx}.npy', test_data_tensor)
+    #np.save(OUTPUT_PATH + f'counting_wfa_states_len{T}_size{nbEx}.npy', test_data_tensor)
+    np.savetxt(OUTPUT_PATH + f'counting_wfa_states_len{T}_size{nbEx}.txt', test_data_tensor)
+    print(test_data_tensor[0])
