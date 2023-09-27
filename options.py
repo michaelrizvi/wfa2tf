@@ -14,7 +14,7 @@ def parse_option():
     parser.add_argument('--epochs', type=int, default=15,
                         help='number of training epochs for SGD / max iterations for ALS')
 
-    parser.add_argument('--batchsize', type=int, default=16,
+    parser.add_argument('--batchsize', type=int, default=32,
                         help="batch size for training and validation sets")
 
     parser.add_argument('--dropout', type=float, default=0.2,
@@ -30,6 +30,8 @@ def parse_option():
 
     parser.add_argument('--nbEx', type=int, default=10000,
                         help="number of examples in the training set")
+    parser.add_argument('--seqlen', type=int, default=16,
+                        help="number of tokens in a sequence")
     opt = parser.parse_args()
 
     return opt

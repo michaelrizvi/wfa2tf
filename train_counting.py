@@ -24,7 +24,7 @@ USE_WANDB = False
 class SyntheticPautomacDataset(Dataset):
     def __init__(self, label_path, data_path):
         self.labels = torch.Tensor(np.load(label_path)[:, 1:, :])
-        self.data_tensor = torch.LongTensor(np.load(data_path))# [N, seq_length]
+        self.data_tensor = torch.Tensor(np.load(data_path)[:,:,None])# [N, seq_length]
         self.nbL = int(torch.max(self.data_tensor))
         self.nbQ = self.labels.shape[2]
         self.T = self.data_tensor.shape[1]
@@ -53,7 +53,7 @@ def main():
 
     # Load data from files
     nbEx = opt.nbEx
-    seq_len = 16 
+    seq_len = opt.seqlen 
     home = str(Path.home())
 
     OUTPUT_PATH = home + "/data/wfa2tf-data/"
@@ -65,9 +65,12 @@ def main():
     full_set = SyntheticPautomacDataset(
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
     )
+    print(full_set.data_tensor.shape)
     train_set, validation_set, test_set = torch.utils.data.random_split(full_set, [0.8, 0.1, 0.1])
-
     training_loader = DataLoader(train_set, batch_size=opt.batchsize, shuffle=True)
+    x, y = next(iter(training_loader))
+    print(x.shape)
+    print(y.shape)
     validation_loader = DataLoader(validation_set, batch_size=opt.batchsize, shuffle=True)
     test_loader = DataLoader(test_set, batch_size=opt.batchsize, shuffle=True)
 
@@ -82,12 +85,13 @@ def main():
     nhead = 2  # number of heads in ``nn.MultiheadAttention``
     dropout = opt.dropout  # dropout probability
 
-    model = TransformerModel(
-        ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout
-    ).to(device)
-    
-    #loss_fn = nn.MSELoss()
-    loss_fn = nn.L1Loss()
+    #model = TransformerModel(
+    #    ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout, batch_first=True
+    #).to(device)
+
+    model = nn.LSTM(input_size=1, hidden_size=512, num_layers=2, batch_first=True, proj_size=2 )
+
+    loss_fn = nn.MSELoss()
 
     # Define what to do for one epoch
     def train_one_epoch(model, training_loader, optimizer, epoch_index):
@@ -107,11 +111,13 @@ def main():
             optimizer.zero_grad()
 
             # Make predictions for this batch
-            outputs = model(inputs.cuda()).to(device)
+            #outputs = model(inputs).to(device)
+            outputs, (hn, cn) = model(inputs)
+            outputs.to(device)
 #            print(outputs)
 
             # Compute the loss and its gradients
-            loss = loss_fn(outputs.cuda()[:,:,0].squeeze(), labels.cuda()[:,:,0].squeeze()).to(device)
+            loss = loss_fn(outputs, labels).to(device)
             loss.backward()
 
             # Adjust learning weights
@@ -133,15 +139,17 @@ def main():
                 inputs, labels = data
                 inputs.to(device)
                 labels.to(device)
-                outputs = model(inputs.cuda()).to(device)
+                #outputs = model(inputs).to(device)
+                outputs, (hn, cn) = model(inputs)
+                outputs.to(device)
                 if is_eval:
                     outputs = torch.round(outputs)
                 if (i == 0 or i == len(loader) - 1) and is_eval==True:
                     print("inputs:", inputs)
                     print("outputs: ",outputs)
                     print("labels", labels)
-                    print("diff: ",loss_fn(outputs.cuda(), labels.cuda()))
-                loss = loss_fn(outputs.cuda(), labels.cuda()).to(device)
+                    print("diff: ",loss_fn(outputs, labels))
+                loss = loss_fn(outputs, labels).to(device)
                 running_loss += loss.item()
 
         avg_loss = running_loss / len(loader)
@@ -160,9 +168,9 @@ def main():
 
     # Setup wandb
     automata_name = "counting wfa"
-    USE_WANDB = opt.use_wandb
-    run = wandb.init(project="wfa2tf")
-    wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}, nlayers={opt.nlayers}"
+    #USE_WANDB = opt.use_wandb
+    #run = wandb.init(project="wfa2tf")
+    #wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}, nlayers={opt.nlayers}"
 
     for epoch in range(EPOCHS):
         print("EPOCH {}:".format(epoch_number + 1))
@@ -177,8 +185,8 @@ def main():
 
         # Log the running loss averaged per batch
         # for both training and validation
-        wandb.log({"training loss": avg_loss}, step=epoch)
-        wandb.log({"validation loss": avg_vloss}, step=epoch)
+        #wandb.log({"training loss": avg_loss}, step=epoch)
+        #wandb.log({"validation loss": avg_vloss}, step=epoch)
 
         # Track best performance, and save the model's state
         # if avg_vloss < best_vloss:
@@ -190,7 +198,8 @@ def main():
 
     # Evaluation on the test set
     test_loss = validate_one_epoch(model, test_loader, loss_fn, is_eval=True)
-    wandb.log({"test loss": test_loss}, step=epoch)
+    print("LOSS train {} valid {}, test {}".format(avg_loss, avg_vloss, test_loss))
+    #wandb.log({"test loss": test_loss}, step=epoch)
     
 
 

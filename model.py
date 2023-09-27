@@ -35,11 +35,11 @@ class PositionalEncoding(nn.Module):
 class TransformerModel(nn.Module):
 
     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
-            nlayers: int, nstates: int, dropout: float = 0.5):
+            nlayers: int, nstates: int, dropout: float = 0.5, batch_first: bool = True):
         super().__init__()
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(d_model, dropout)
-        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout) # We use a O(n^4) MLP
+        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout, batch_first=batch_first)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.embedding = nn.Embedding(ntoken, d_model) # PUT ACTUAL EMBEDDING WITH VEC(A) HERE??
         self.d_model = d_model
