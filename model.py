@@ -62,10 +62,24 @@ class TransformerModel(nn.Module):
         Returns:
             output Tensor of shape ``[seq_len, batch_size, ntoken]``
         """
+        batchsize = src.shape[0]
         #print("src", src.shape)
+        #print(src)
+
         src = self.embedding(src.type(torch.long)).squeeze()
-        #print("embeded", src.shape)
         #src = self.pos_encoder(src)
+        #print("embedding", src.shape)
+        #print(src)
+
+
+        #print(torch.arange(0,src.shape[1]))
+        if batchsize==1:
+           src[:,-1] = torch.arange(0,src.shape[0]) 
+        else:
+            for i in range(int(batchsize)):
+                src[i,:,-1] = torch.arange(0,src.shape[1])
+        #print("pos encoding", src.shape)
+        #print(src)
         output = self.transformer_encoder(src, src_mask)
         #print("output", output.shape)
         output = self.linear(output)

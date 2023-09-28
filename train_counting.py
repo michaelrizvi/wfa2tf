@@ -66,54 +66,27 @@ def main():
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
     )
     train_set, validation_set, test_set = torch.utils.data.random_split(full_set, [0.8, 0.1, 0.1])
-
     training_loader = DataLoader(train_set, batch_size=opt.batchsize, shuffle=True)
-    x, y = next(iter(training_loader))
-    print(x.shape)
-    print(y.shape)
     validation_loader = DataLoader(validation_set, batch_size=opt.batchsize, shuffle=True)
     test_loader = DataLoader(test_set, batch_size=opt.batchsize, shuffle=True)
 
     ntokens = full_set.nbL + 1  # size of vocabulary
-    emsize = 128  # embedding dimension
+    emsize = opt.emsize  # embedding dimension
     #d_hid = 2 * full_set.nbQ**2 + 2  # dimension of the feedforward network model in ``nn.TransformerEncoder``
-    d_hid = 512
+    d_hid = opt.d_hid 
 #    nlayers = int(
 #        np.floor(np.log2(full_set.T))
 #    )  # number of ``nn.TransformerEncoderLayer`` in ``nn.TransformerEncoder``
     nlayers = opt.nlayers
-    nhead = 2  # number of heads in ``nn.MultiheadAttention``
+    nhead = opt.nhead  # number of heads in ``nn.MultiheadAttention``
     dropout = opt.dropout  # dropout probability
     
-    class myTransformer(nn.Module):
-        def __init__(self, vocab, output_dims, d_hid=128, nhead=2, num_layers=2):
-            super().__init__()
-            self.embedding = nn.Embedding(vocab, d_hid)
-            encoder_layer = nn.TransformerEncoderLayer(d_model=d_hid, nhead=nhead, batch_first=True)
-            self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-            self.linear = nn.Linear(d_hid, output_dims)
-
-        def forward(self, x):
-            #print("1",x.shape)
-            out = self.embedding(x.type(torch.long)).squeeze()
-            #print("2",out.shape)
-            out = self.transformer_encoder(out)
-            #print("3",out.shape)
-            out = self.linear(out)
-            #print("4",out.shape)
-
-            return out
-
-    #model = TransformerModel(
-    #    ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout
-    #).to(device)
-    model = myTransformer(2,2)
-    out = model(x)
-    print(out.shape)
+    model = TransformerModel(
+        ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout
+    ).to(device)
 
     #print(out.shape)
     loss_fn = nn.MSELoss()
-    #loss_fn = nn.L1Loss()
 
     # Define what to do for one epoch
     def train_one_epoch(model, training_loader, optimizer, epoch_index):
@@ -176,7 +149,6 @@ def main():
     ### TRAIN THE MODEL ###
     #optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9)
     optimizer = torch.optim.AdamW(model.parameters(), lr=opt.lr)
-    #optimizer = torch.optim.Adam(model.parameters())
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     epoch_number = 0
@@ -187,9 +159,9 @@ def main():
 
     # Setup wandb
     automata_name = "counting wfa"
-   # USE_WANDB = opt.use_wandb
-   # run = wandb.init(project="wfa2tf")
-   # wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}, nlayers={opt.nlayers}"
+    USE_WANDB = opt.use_wandb
+    run = wandb.init(project="wfa2tf")
+    wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}, nlayers={opt.nlayers}"
 
     for epoch in range(EPOCHS):
         print("EPOCH {}:".format(epoch_number + 1))
@@ -204,8 +176,8 @@ def main():
 
         # Log the running loss averaged per batch
         # for both training and validation
-        #wandb.log({"training loss": avg_loss}, step=epoch)
-        #wandb.log({"validation loss": avg_vloss}, step=epoch)
+        wandb.log({"training loss": avg_loss}, step=epoch)
+        wandb.log({"validation loss": avg_vloss}, step=epoch)
 
         # Track best performance, and save the model's state
         # if avg_vloss < best_vloss:
@@ -216,9 +188,9 @@ def main():
         epoch_number += 1
 
     # Evaluation on the test set
-    test_loss = validate_one_epoch(model, test_loader, loss_fn, is_eval=True)
+    test_loss = validate_one_epoch(model, test_loader, loss_fn, is_eval=False)
     print("LOSS train {} valid {}, test {}".format(avg_loss, avg_vloss, test_loss))
-    #wandb.log({"test loss": test_loss}, step=epoch)
+    wandb.log({"test loss": test_loss}, step=epoch)
     
 
 

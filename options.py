@@ -30,8 +30,18 @@ def parse_option():
 
     parser.add_argument('--nbEx', type=int, default=10000,
                         help="number of examples in the training set")
+
     parser.add_argument('--seqlen', type=int, default=16,
                         help="number of tokens in a sequence")
+
+    parser.add_argument('--emsize', type=int, default=16,
+                        help="embedding dimension of the transformer")
+
+    parser.add_argument('--d_hid', type=int, default=16,
+                        help="hidden layer size or the transformer")
+
+    parser.add_argument('--nhead', type=int, default=16,
+                        help="number of heads for multihead attention")
     opt = parser.parse_args()
 
     return opt

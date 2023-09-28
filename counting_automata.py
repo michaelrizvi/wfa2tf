@@ -7,6 +7,7 @@ import splearn
 from splearn.datasets.base import load_data_sample
 from tqdm import tqdm
 from pathlib import Path
+from options import parse_option
 
 def get_states(input_seq, wfa):
     out = wfa.initial 
@@ -22,23 +23,29 @@ def get_states(input_seq, wfa):
 
 
 if __name__ == "__main__":
-    np.random.seed(420)
+    # Get cmd line args
+    opt = parse_option()
+
+    np.random.seed(opt.seed)
     home = str(Path.home())
     OUTPUT_PATH = home + '/data/wfa2tf-data/'
     
     # Create an automaton that counts the nb of 0s in alphabet 0,1
+    # TODO create classes for multiple automata and make a function in
+    # this script to choose automata from premade list
+    automata_name = "counting_wfa"
     transitions = [np.array([[1.0,0.0],[1.0,1.0]]), np.eye(2)]
     initial = np.array([0.0,1.0])
     final = np.array([1.0,0.0])
     wfa = splearn.automaton.Automaton(nbL=2, nbS=2, initial=initial,
             final=final, transitions=transitions)
 
-    nbEx = 100
-    T = 8 
+    nbEx = opt.nbEx 
+    T = opt.seqlen 
     # Create data tensor
     test_examples_tensor = np.random.randint(wfa.nbL, size=(nbEx, T)) # Maybe there is a better way to generate the data?
     # Does not sample from the "mode" of the data distribution!!!
-    np.save(OUTPUT_PATH + f'counting_wfa_data_len{T}_size{nbEx}.npy', test_examples_tensor)
+    np.save(OUTPUT_PATH + f'{automata_name}_data_len{T}_size{nbEx}.npy', test_examples_tensor)
 
     # Compute states for the data
     test_data_tensor = np.zeros((nbEx, T+1, wfa.nbS))
