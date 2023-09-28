@@ -33,8 +33,8 @@ if __name__ == "__main__":
     wfa = splearn.automaton.Automaton(nbL=2, nbS=2, initial=initial,
             final=final, transitions=transitions)
 
-    nbEx = 10
-    T = 16 
+    nbEx = 100
+    T = 8 
     # Create data tensor
     test_examples_tensor = np.random.randint(wfa.nbL, size=(nbEx, T)) # Maybe there is a better way to generate the data?
     # Does not sample from the "mode" of the data distribution!!!

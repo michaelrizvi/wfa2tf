@@ -65,8 +65,8 @@ def main():
     full_set = SyntheticPautomacDataset(
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
     )
+    print(full_set.data_tensor.shape)
     train_set, validation_set, test_set = torch.utils.data.random_split(full_set, [0.8, 0.1, 0.1])
-
     training_loader = DataLoader(train_set, batch_size=opt.batchsize, shuffle=True)
     x, y = next(iter(training_loader))
     print(x.shape)
@@ -84,36 +84,14 @@ def main():
     nlayers = opt.nlayers
     nhead = 2  # number of heads in ``nn.MultiheadAttention``
     dropout = opt.dropout  # dropout probability
-    
-    class myTransformer(nn.Module):
-        def __init__(self, vocab, output_dims, d_hid=128, nhead=2, num_layers=2):
-            super().__init__()
-            self.embedding = nn.Embedding(vocab, d_hid)
-            encoder_layer = nn.TransformerEncoderLayer(d_model=d_hid, nhead=nhead, batch_first=True)
-            self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-            self.linear = nn.Linear(d_hid, output_dims)
-
-        def forward(self, x):
-            #print("1",x.shape)
-            out = self.embedding(x.type(torch.long)).squeeze()
-            #print("2",out.shape)
-            out = self.transformer_encoder(out)
-            #print("3",out.shape)
-            out = self.linear(out)
-            #print("4",out.shape)
-
-            return out
 
     #model = TransformerModel(
-    #    ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout
+    #    ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout, batch_first=True
     #).to(device)
-    model = myTransformer(2,2)
-    out = model(x)
-    print(out.shape)
 
-    #print(out.shape)
+    model = nn.LSTM(input_size=1, hidden_size=512, num_layers=2, batch_first=True, proj_size=2 )
+
     loss_fn = nn.MSELoss()
-    #loss_fn = nn.L1Loss()
 
     # Define what to do for one epoch
     def train_one_epoch(model, training_loader, optimizer, epoch_index):
@@ -133,7 +111,9 @@ def main():
             optimizer.zero_grad()
 
             # Make predictions for this batch
-            outputs = model(inputs).to(device)
+            #outputs = model(inputs).to(device)
+            outputs, (hn, cn) = model(inputs)
+            outputs.to(device)
 #            print(outputs)
 
             # Compute the loss and its gradients
@@ -159,7 +139,9 @@ def main():
                 inputs, labels = data
                 inputs.to(device)
                 labels.to(device)
-                outputs = model(inputs).to(device)
+                #outputs = model(inputs).to(device)
+                outputs, (hn, cn) = model(inputs)
+                outputs.to(device)
                 if is_eval:
                     outputs = torch.round(outputs)
                 if (i == 0 or i == len(loader) - 1) and is_eval==True:
@@ -174,8 +156,7 @@ def main():
         return avg_loss
 
     ### TRAIN THE MODEL ###
-    #optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=opt.lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=opt.lr, momentum=0.9)
     #optimizer = torch.optim.Adam(model.parameters())
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -187,9 +168,9 @@ def main():
 
     # Setup wandb
     automata_name = "counting wfa"
-   # USE_WANDB = opt.use_wandb
-   # run = wandb.init(project="wfa2tf")
-   # wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}, nlayers={opt.nlayers}"
+    #USE_WANDB = opt.use_wandb
+    #run = wandb.init(project="wfa2tf")
+    #wandb.run.name = f"{automata_name} T={full_set.T},nQ={full_set.nbQ},epochs={EPOCHS},dropout={dropout},batchsize={opt.batchsize}, lr={opt.lr}, nlayers={opt.nlayers}"
 
     for epoch in range(EPOCHS):
         print("EPOCH {}:".format(epoch_number + 1))
