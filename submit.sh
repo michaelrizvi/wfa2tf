@@ -8,17 +8,7 @@
 module load python/3.8
 source ~/test-env/bin/activate
 
-python train_counting.py --batchsize 8 --dropout 0.2 --lr 0.001 --nlayers 1
-python train_counting.py --batchsize 16 --dropout 0.2 --lr 0.001 --nlayers 1
-python train_counting.py --batchsize 8 --dropout 0.2 --lr 0.001 --nlayers 2
-python train_counting.py --batchsize 16 --dropout 0.2 --lr 0.001 --nlayers 2
-python train_counting.py --batchsize 8 --dropout 0.2 --lr 0.001 --nlayers 3
-python train_counting.py --batchsize 16 --dropout 0.2 --lr 0.001 --nlayers 3
-python train_counting.py --batchsize 8 --dropout 0.2 --lr 0.001 --nlayers 4
-python train_counting.py --batchsize 16 --dropout 0.2 --lr 0.001 --nlayers 4
-python train_counting.py --batchsize 8 --dropout 0.2 --lr 0.001 --nlayers 5
-python train_counting.py --batchsize 16 --dropout 0.2 --lr 0.001 --nlayers 5
-python train_counting.py --batchsize 8 --dropout 0.2 --lr 0.001 --nlayers 6
-python train_counting.py --batchsize 16 --dropout 0.2 --lr 0.001 --nlayers 6
-python train_counting.py --batchsize 8 --dropout 0.2 --lr 0.001 --nlayers 7
-python train_counting.py --batchsize 16 --dropout 0.2 --lr 0.001 --nlayers 7
+python train_counting.py --nlayers 9 --seqlen=16
+python train_counting.py --nlayers 10 --seqlen=16
+python train_counting.py --nlayers 11 --seqlen=16
+python train_counting.py --nlayers 12 --seqlen=16

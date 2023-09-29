@@ -11,7 +11,7 @@ def parse_option():
     parser.add_argument('--seed', type=int, default=0,
                         help='seed')
 
-    parser.add_argument('--epochs', type=int, default=15,
+    parser.add_argument('--epochs', type=int, default=100,
                         help='number of training epochs for SGD / max iterations for ALS')
 
     parser.add_argument('--batchsize', type=int, default=32,
@@ -40,7 +40,7 @@ def parse_option():
     parser.add_argument('--d_hid', type=int, default=16,
                         help="hidden layer size or the transformer")
 
-    parser.add_argument('--nhead', type=int, default=16,
+    parser.add_argument('--nhead', type=int, default=2,
                         help="number of heads for multihead attention")
     opt = parser.parse_args()
 

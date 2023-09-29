@@ -50,6 +50,8 @@ def main():
 
     # Make sure to use CUDA if possible
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    print(device)
 
     # Load data from files
     nbEx = opt.nbEx
@@ -106,11 +108,11 @@ def main():
             optimizer.zero_grad()
 
             # Make predictions for this batch
-            outputs = model(inputs).to(device)
+            outputs = model(inputs.to(device)).to(device)
 #            print(outputs)
 
             # Compute the loss and its gradients
-            loss = loss_fn(outputs, labels).to(device)
+            loss = loss_fn(outputs.to(device), labels.to(device)).to(device)
             loss.backward()
 
             # Adjust learning weights
@@ -132,15 +134,15 @@ def main():
                 inputs, labels = data
                 inputs.to(device)
                 labels.to(device)
-                outputs = model(inputs).to(device)
+                outputs = model(inputs.to(device)).to(device)
                 if is_eval:
                     outputs = torch.round(outputs)
                 if (i == 0 or i == len(loader) - 1) and is_eval==True:
                     print("inputs:", inputs)
                     print("outputs: ",outputs)
                     print("labels", labels)
-                    print("diff: ",loss_fn(outputs, labels))
-                loss = loss_fn(outputs, labels).to(device)
+                    print("diff: ",loss_fn(outputs.to(device), labels.to(device)))
+                loss = loss_fn(outputs.to(device), labels.to(device)).to(device)
                 running_loss += loss.item()
 
         avg_loss = running_loss / len(loader)
