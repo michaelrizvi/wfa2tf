@@ -163,6 +163,7 @@ cython_debug/
 # Pytorch logs
 runs
 model*
+best_model
 
 # VS Code docs
 .vscode

@@ -23,7 +23,7 @@ def parse_option():
     parser.add_argument('--lr', type=float, default=0.001,
                         help="learning rate for the optimizer")
 
-    parser.add_argument('--use_wandb', type=bool, default=False)
+    parser.add_argument('--debug', type=bool, default=False)
 
     parser.add_argument('--nlayers', type=int, default=4,
                         help="number of layers for the transformer")
@@ -42,6 +42,9 @@ def parse_option():
 
     parser.add_argument('--nhead', type=int, default=2,
                         help="number of heads for multihead attention")
+
+    parser.add_argument('--ntry', type=int, default=1,
+                        help="number of times we train the model (for repeatability)")
     opt = parser.parse_args()
 
     return opt

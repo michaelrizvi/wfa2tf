@@ -136,12 +136,6 @@ def main():
     ### TRAIN THE MODEL ###
     optimizer = torch.optim.AdamW(model.parameters(), lr=opt.lr)
 
-    epoch_number = 0
-
-    EPOCHS = opt.epochs
-
-    best_vloss = 1_000_000
-
     # Setup wandb
     automata_name = "counting wfa"
     if not opt.debug:
@@ -149,39 +143,46 @@ def main():
         wandb.run.name = f"{automata_name} T={full_set.T}, nlayers={opt.nlayers}"
 
     test_losses = []
-    for epoch in range(EPOCHS):
-        print("EPOCH {}:".format(epoch_number + 1))
-        # Make sure gradient tracking is on, and do a pass over the data
-        model.train()
-        avg_loss = train_one_epoch(model, training_loader, optimizer, epoch)
+    for n in range(opt.ntry):
+        epoch_number = 0
+        EPOCHS = opt.epochs
+        best_vloss = 1_000_000
+        model.init_weights()
+        for epoch in range(EPOCHS):
+            print("EPOCH {}:".format(epoch_number + 1))
+            # Make sure gradient tracking is on, and do a pass over the data
+            model.train()
+            avg_loss = train_one_epoch(model, training_loader, optimizer, epoch)
 
-        # We don't need gradients on to do reporting
+            # We don't need gradients on to do reporting
+            model.eval()
+            avg_vloss = validate_one_epoch(model, validation_loader, loss_fn)
+            print("LOSS train {} valid {}".format(avg_loss, avg_vloss))
+
+            # Track best performance, and save the model's state
+            if avg_vloss < best_vloss:
+                best_vloss = avg_vloss
+                model_path = 'best_model'
+                torch.save(model.state_dict(), model_path)
+
+            epoch_number += 1
+
+        # Evaluation on the test set
+        model.load_state_dict(torch.load(model_path))
         model.eval()
-        avg_vloss = validate_one_epoch(model, validation_loader, loss_fn)
-        print("LOSS train {} valid {}".format(avg_loss, avg_vloss))
+        test_loss = validate_one_epoch(model, test_loader, loss_fn, is_eval=False)
+        test_losses.append(test_loss)
+        print("LOSS train {} valid {}, test {}".format(avg_loss, avg_vloss, test_loss))
 
-        # Log the running loss averaged per batch
-        # for both training and validation
-        if not opt.debug:
-            wandb.log({"training loss": avg_loss}, step=epoch)
-            wandb.log({"validation loss": avg_vloss}, step=epoch)
-
-        # Track best performance, and save the model's state
-        if avg_vloss < best_vloss:
-            best_vloss = avg_vloss
-            model_path = 'best_model'
-            torch.save(model.state_dict(), model_path)
-
-        epoch_number += 1
-
-    # Evaluation on the test set
-    model.load_state_dict(torch.load(model_path))
-    model.eval()
-    test_loss = validate_one_epoch(model, test_loader, loss_fn, is_eval=False)
-    test_losses.append(test_loss)
-    print("LOSS train {} valid {}, test {}".format(avg_loss, avg_vloss, test_loss))
+    avg_test_loss = np.mean(test_losses)
+    min_test_loss = np.min(test_losses)
     if not opt.debug:
-        wandb.log({"test loss": test_loss}, step=epoch)
+        wandb.log({"avg test loss": avg_test_loss})
+        wandb.log({"min test loss": min_test_loss})
+    print("average test loss:", avg_test_loss)
+    print("min test loss:", min_test_loss)
+
+     
 
 
 if __name__ == "__main__":
