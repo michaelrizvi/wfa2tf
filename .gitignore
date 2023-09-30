@@ -164,6 +164,7 @@ cython_debug/
 runs
 model*
 best_model
+models/*
 
 # VS Code docs
 .vscode

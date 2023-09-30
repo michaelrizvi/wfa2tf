@@ -162,7 +162,7 @@ def main():
             # Track best performance, and save the model's state
             if avg_vloss < best_vloss:
                 best_vloss = avg_vloss
-                model_path = 'best_model'
+                model_path = f'models/best_model_nlayer{opt.nlayers}'
                 torch.save(model.state_dict(), model_path)
 
             epoch_number += 1
@@ -173,6 +173,9 @@ def main():
         test_loss = validate_one_epoch(model, test_loader, loss_fn, is_eval=False)
         test_losses.append(test_loss)
         print("LOSS train {} valid {}, test {}".format(avg_loss, avg_vloss, test_loss))
+        if not opt.debug:
+            wandb.log({"training loss": avg_loss})
+            wandb.log({"validation loss": avg_vloss})
 
     avg_test_loss = np.mean(test_losses)
     min_test_loss = np.min(test_losses)
