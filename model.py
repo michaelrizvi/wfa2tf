@@ -44,6 +44,7 @@ class TransformerModel(nn.Module):
         self.embedding = nn.Embedding(ntoken, d_model) # PUT ACTUAL EMBEDDING WITH VEC(A) HERE??
         self.d_model = d_model
         self.linear = nn.Linear(d_model, nstates) 
+        self.softmax = nn.Softmax(dim=2)
 
         self.init_weights()
 
@@ -53,7 +54,7 @@ class TransformerModel(nn.Module):
         self.linear.bias.data.zero_()
         self.linear.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src: Tensor, src_mask: Tensor = None) -> Tensor:
+    def forward(self, src: Tensor, src_mask: Tensor = None, use_softmax=False) -> Tensor:
         """
         Arguments:
             src: Tensor, shape ``[seq_len, batch_size]``
@@ -63,26 +64,16 @@ class TransformerModel(nn.Module):
             output Tensor of shape ``[seq_len, batch_size, ntoken]``
         """
         batchsize = src.shape[0]
-        #print("src", src.shape)
-        #print(src)
-
         src = self.embedding(src.type(torch.long)).squeeze()
-        #src = self.pos_encoder(src)
-        #print("embedding", src.shape)
-        #print(src)
-
-
-        #print(torch.arange(0,src.shape[1]))
         if batchsize==1:
            src[:,-1] = torch.arange(0,src.shape[0]) 
         else:
             for i in range(int(batchsize)):
                 src[i,:,-1] = torch.arange(0,src.shape[1])
-        #print("pos encoding", src.shape)
-        #print(src)
         output = self.transformer_encoder(src, src_mask)
-        #print("output", output.shape)
         output = self.linear(output)
+        if use_softmax:
+            output = self.softmax(output)
         return output
 
 

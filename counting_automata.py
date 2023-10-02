@@ -43,13 +43,13 @@ if __name__ == "__main__":
     nbEx = opt.nbEx 
     T = opt.seqlen 
     # Create data tensor
-    test_examples_tensor = np.random.randint(wfa.nbL, size=(nbEx, T)) # Maybe there is a better way to generate the data?
+    inputs = np.random.randint(wfa.nbL, size=(nbEx, T)) # Maybe there is a better way to generate the data?
     # Does not sample from the "mode" of the data distribution!!!
-    np.save(OUTPUT_PATH + f'{automata_name}_data_len{T}_size{nbEx}.npy', test_examples_tensor)
+    np.save(OUTPUT_PATH + f'{automata_name}_data_len{T}_size{nbEx}.npy', inputs)
 
     # Compute states for the data
-    test_data_tensor = np.zeros((nbEx, T+1, wfa.nbS))
+    outputs = np.zeros((nbEx, T+1, wfa.nbS))
     for i in range(nbEx):
-        test_data_tensor[i] = get_states(test_examples_tensor[i], wfa)
+        outputs[i] = get_states(outputs[i], wfa)
 
-    np.save(OUTPUT_PATH + f'counting_wfa_states_len{T}_size{nbEx}.npy', test_data_tensor)
+    np.save(OUTPUT_PATH + f'counting_wfa_states_len{T}_size{nbEx}.npy', outputs)

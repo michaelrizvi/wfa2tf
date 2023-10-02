@@ -16,22 +16,7 @@ import torch.nn.functional as F
 import wandb
 from pathlib import Path
 from options import parse_option
-
-
-# Define Dataset object from labels and sequences
-class SyntheticPautomacDataset(Dataset):
-    def __init__(self, label_path, data_path):
-        self.labels = torch.Tensor(np.load(label_path)[:, 1:, :])
-        self.data_tensor = torch.Tensor(np.load(data_path)[:,:,None])# [N, seq_length]
-        self.nbL = int(torch.max(self.data_tensor))
-        self.nbQ = self.labels.shape[2]
-        self.T = self.data_tensor.shape[1]
-
-    def __len__(self):
-        return self.data_tensor.shape[0]
-
-    def __getitem__(self, idx):
-        return self.data_tensor[idx], self.labels[idx]
+from utils import SyntheticDataset
 
 
 def main():
@@ -57,7 +42,7 @@ def main():
     INPUT_PATH = OUTPUT_PATH
     train_file = f"counting_wfa_data_len{seq_len}_size{nbEx}.npy"
 
-    full_set = SyntheticPautomacDataset(
+    full_set = SyntheticDataset(
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
     )
     train_set, validation_set, test_set = torch.utils.data.random_split(full_set, [0.8, 0.1, 0.1])

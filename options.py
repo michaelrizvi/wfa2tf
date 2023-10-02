@@ -12,7 +12,7 @@ def parse_option():
                         help='seed')
 
     parser.add_argument('--epochs', type=int, default=100,
-                        help='number of training epochs for SGD / max iterations for ALS')
+                        help='number of training epochs for SGD')
 
     parser.add_argument('--batchsize', type=int, default=32,
                         help="batch size for training and validation sets")
@@ -45,6 +45,10 @@ def parse_option():
 
     parser.add_argument('--ntry', type=int, default=1,
                         help="number of times we train the model (for repeatability)")
+
+    parser.add_argument('--nb_aut', type=int, default=4,
+                        help="Number corresponding to automata (for Pautomac experiments)")
+
     opt = parser.parse_args()
 
     return opt

@@ -7,7 +7,6 @@ from torch import Tensor
 import torch.nn.functional as f
 import torch
 from torch import nn
-from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from datetime import datetime
 from model import TransformerModel
@@ -16,25 +15,8 @@ import torch.nn.functional as F
 import wandb
 from pathlib import Path
 from options import parse_option
-
+from utils import SyntheticDataset
 USE_WANDB = False
-
-
-# Define Dataset object from labels and sequences
-class SyntheticPautomacDataset(Dataset):
-    def __init__(self, label_path, data_path):
-        self.labels = torch.Tensor(np.load(label_path)[:, 1:, :])
-        self.data_tensor = torch.Tensor(np.load(data_path)[:,:,None])# [N, seq_length]
-        self.nbL = int(torch.max(self.data_tensor))
-        self.nbQ = self.labels.shape[2]
-        self.T = self.data_tensor.shape[1]
-
-    def __len__(self):
-        return self.data_tensor.shape[0]
-
-    def __getitem__(self, idx):
-        return self.data_tensor[idx], self.labels[idx]
-
 
 def main():
     def reinit_wandb():
@@ -62,7 +44,7 @@ def main():
     INPUT_PATH = OUTPUT_PATH
     train_file = f"counting_wfa_data_len{seq_len}_size{nbEx}.npy"
 
-    full_set = SyntheticPautomacDataset(
+    full_set = SyntheticDataset(
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
     )
     print(full_set.data_tensor.shape)
