@@ -35,8 +35,6 @@ def main():
     PATH = home + "/data/wfa2tf-data/"
     output_file = f'{opt.nb_aut}.pautomac_synth_states_len{opt.seqlen}_size{opt.nbEx}.npy' 
     input_file = f'{opt.nb_aut}.pautomac_synth_data_len{opt.seqlen}_size{opt.nbEx}.npy' 
-    print(input_file)
-    print(output_file)
     full_set = SyntheticDataset(
         PATH + output_file, PATH + input_file
     )
@@ -49,19 +47,18 @@ def main():
     print(y.shape)
 
     ntokens = full_set.nbL + 1  # size of vocabulary
-    print(ntokens)
-    emsize = opt.emsize  # embedding dimension
-    d_hid = opt.d_hid 
-    nlayers = opt.nlayers
-    nhead = opt.nhead  # number of heads in ``nn.MultiheadAttention``
-    dropout = opt.dropout  # dropout probability
     
     model = TransformerModel(
-        ntokens, emsize, nhead, d_hid, nlayers, full_set.nbQ, dropout
+        ntokens, opt.emsize, opt.nhead, opt.d_hid, opt.nlayers, full_set.nbQ, opt.dropout
     ).to(device)
 
     loss_fn = nn.MSELoss()
 
+    out = model(x, use_softmax=True)
+    print(loss_fn(out, y))
+    print(out)
+    print(y)
+    #sys.exit()
     # Define what to do for one epoch
     def train_one_epoch(model, training_loader, optimizer, epoch_index):
         running_loss = 0.0

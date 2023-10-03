@@ -35,14 +35,12 @@ def main():
     seq_len = opt.seqlen 
     home = str(Path.home())
 
-    OUTPUT_PATH = home + "/data/wfa2tf-data/"
-    y_train_file = f"counting_wfa_states_len{seq_len}_size{nbEx}.npy"
-
-    INPUT_PATH = OUTPUT_PATH
-    train_file = f"counting_wfa_data_len{seq_len}_size{nbEx}.npy"
-
+    home = str(Path.home())
+    PATH = home + "/data/wfa2tf-data/"
+    output_file = f'{opt.nb_aut}.pautomac_synth_states_len{opt.seqlen}_size{opt.nbEx}.npy' 
+    input_file = f'{opt.nb_aut}.pautomac_synth_data_len{opt.seqlen}_size{opt.nbEx}.npy' 
     full_set = SyntheticDataset(
-        OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
+        PATH + output_file, PATH + input_file
     )
     train_set, validation_set, test_set = torch.utils.data.random_split(full_set, [0.8, 0.1, 0.1])
     training_loader = DataLoader(train_set, batch_size=opt.batchsize, shuffle=True)
@@ -72,7 +70,7 @@ def main():
             optimizer.zero_grad()
 
             # Make predictions for this batch
-            outputs = model(inputs.to(device)).to(device)
+            outputs = model(inputs.to(device), use_softmax=True).to(device)
 #            print(outputs)
 
             # Compute the loss and its gradients
@@ -98,9 +96,7 @@ def main():
                 inputs, labels = data
                 inputs.to(device)
                 labels.to(device)
-                outputs = model(inputs.to(device)).to(device)
-                if is_eval:
-                    outputs = torch.round(outputs)
+                outputs = model(inputs.to(device), use_softmax=True).to(device)
                 if (i == 0 or i == len(loader) - 1) and is_eval==True:
                     print("inputs:", inputs)
                     print("outputs: ",outputs)
@@ -116,7 +112,7 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=opt.lr)
 
     # Setup wandb
-    automata_name = "counting wfa"
+    automata_name = f"{opt.nb_aut} pautomac"
     if not opt.debug:
         run = wandb.init(project="wfa2tf")
         wandb.run.name = f"{automata_name} T={full_set.T}, nlayers={opt.nlayers}"
@@ -141,7 +137,7 @@ def main():
             # Track best performance, and save the model's state
             if avg_vloss < best_vloss:
                 best_vloss = avg_vloss
-                model_path = f'models/best_model_nlayer{opt.nlayers}'
+                model_path = f'models/best_model_nlayer{opt.nlayers}_pautomac{opt.nb_aut}'
                 torch.save(model.state_dict(), model_path)
 
             epoch_number += 1
