@@ -16,6 +16,7 @@ arg="$1"
 echo "Automata number: $arg"
 
 # create a local virtual environnement (on the compute node)
+module load libffi
 module load python/3.8
 source ~/test-env/bin/activate
 
