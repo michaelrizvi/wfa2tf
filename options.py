@@ -47,7 +47,13 @@ def parse_option():
                         help="number of times we train the model (for repeatability)")
 
     parser.add_argument('--nb_aut', type=int, default=4,
-                        help="Number corresponding to automata (for Pautomac experiments)")
+                        help="number corresponding to automata (for Pautomac experiments)")
+
+    parser.add_argument('--k', type=int, default=1,
+                        help="number of characters to count for k counting automata")
+
+    parser.add_argument('--nbL', type=int, default=2,
+                        help="number of letters in the alphabet")
 
     opt = parser.parse_args()
 

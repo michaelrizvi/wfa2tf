@@ -52,7 +52,7 @@ def main():
     model = TransformerModel(
         ntokens, opt.emsize, opt.nhead, opt.d_hid, opt.nlayers, full_set.nbQ, opt.dropout
     ).to(device)
-
+    
     loss_fn = nn.MSELoss()
 
     # Define what to do for one epoch

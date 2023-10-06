@@ -32,15 +32,14 @@ def main():
     print(device)
 
     # Load data from files
-    nbEx = opt.nbEx
-    seq_len = opt.seqlen 
     home = str(Path.home())
+    automata_name = f'counting_automata_k{opt.k}_nbL{opt.nbL}'
 
     OUTPUT_PATH = home + "/data/wfa2tf-data/"
-    y_train_file = f"counting_wfa_states_len{seq_len}_size{nbEx}.npy"
+    y_train_file = f"{automata_name}_states_len{opt.seqlen}_size{opt.nbEx}.npy"
 
     INPUT_PATH = OUTPUT_PATH
-    train_file = f"counting_wfa_data_len{seq_len}_size{nbEx}.npy"
+    train_file = f"{automata_name}_data_len{opt.seqlen}_size{opt.nbEx}.npy"
 
     full_set = SyntheticDataset(
         OUTPUT_PATH + y_train_file, INPUT_PATH + train_file
