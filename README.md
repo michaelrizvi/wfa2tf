@@ -1,20 +1,14 @@
 # Learning WFAs with Transformers
 
 This repo contains the code necessary to reproduce the experiments from the paper 
-"Learning WFAs with Transformers" (working title). 
-
-## Description
-
-Insert text here
+"Learning WFAs with Transformers". 
 
 ## Getting Started
 
 ### Dependencies
 
 This project uses Python 3.8. To install Python 3.8 follow the instructions below
-* Mac: Type `brew install python@3.8` into your terminal
-* PC: ...
-* Linux: ...
+*For Mac: Type `brew install python@3.8` into your terminal
 
 ### Installing
 It is recommended to run this code in a virtual environment. I used `venv` for this project. 
@@ -24,8 +18,7 @@ First, load the Python module you want to use:
 ```
 module load python/3.8
 ```
-
-Then, create a virtual environment in your home directory:
+Or use `python3.8` instead in the following commands. Then, create a virtual environment in your home directory:
 
 ```
 python -m venv $HOME/<env>
@@ -42,44 +35,18 @@ pip install -r requirements.txt
 ```
 
 ### Executing program
-
-* How to run the program
-* Step-by-step bullets
+To run any training script, simply launch using the `python` command or using the editor/IDE of your choice. For example to run the `train_counting.py` experiment:
 ```
-code blocks for commands
-```
-
-## Help
-
-Any advise for common problems or issues.
-```
-command to run if program contains helper info
+python train_counting.py
 ```
 
 ## Authors
 
-Contributors names and contact info
-
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
-
-## Version History
-
-* 0.2
-    * Various bug fixes and optimizations
-    * See [commit change]() or See [release history]()
-* 0.1
-    * Initial Release
+Michael Rizvi-Martel (correspondence to michael.rizvi-martel@mila.quebec)
+Maude Lizaire
+Clara Lacroce
+Guillaume Rabusseau
 
 ## License
 
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
-
-## Acknowledgments
-
-Inspiration, code snippets, etc.
-* [awesome-readme](https://github.com/matiassingers/awesome-readme)
-* [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2)
-* [dbader](https://github.com/dbader/readme-template)
-* [zenorocha](https://gist.github.com/zenorocha/4526327)
-* [fvcproductions](https://gist.github.com/fvcproductions/1bfc2d4aecb01a834b46)
+This project is licensed under the MIT License - see the LICENSE.md file for details
