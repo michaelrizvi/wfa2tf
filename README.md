@@ -7,8 +7,7 @@ This repo contains the code necessary to reproduce the experiments from the pape
 
 ### Dependencies
 
-This project uses Python 3.8. To install Python 3.8 follow the instructions below
-*For Mac: Type `brew install python@3.8` into your terminal
+This project uses Python 3.8. You can find a installer for Python 3.8 [here](https://www.python.org/downloads/release/python-380/). For Mac you can also type `brew install python@3.8` into your terminal
 
 ### Installing
 It is recommended to run this code in a virtual environment. I used `venv` for this project. 
